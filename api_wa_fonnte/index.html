@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Form registrasi akun dengan konfirmasi WhatsApp.">
+  <title>Registrasi Akun</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: #172b25;
+      background: #f1f7f3;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+    main { width: min(100%, 560px); padding: clamp(24px, 5vw, 40px); background: #fff; border-radius: 18px; box-shadow: 0 16px 48px #173d2b18; }
+    h1 { margin: 0 0 8px; font-size: clamp(1.6rem, 4vw, 2rem); }
+    .intro { margin: 0 0 26px; color: #52645c; line-height: 1.55; }
+    .field { margin-bottom: 16px; }
+    label { display: block; margin-bottom: 6px; font-weight: 650; }
+    input, textarea { width: 100%; border: 1px solid #bdcbc3; border-radius: 9px; padding: 12px 13px; font: inherit; background: white; }
+    input:focus, textarea:focus { outline: 3px solid #bcebd0; border-color: #15834d; }
+    textarea { min-height: 92px; resize: vertical; }
+    button { width: 100%; padding: 13px 16px; border: 0; border-radius: 9px; color: white; background: #087443; font: inherit; font-weight: 700; cursor: pointer; }
+    button:hover { background: #056238; }
+    button:disabled { opacity: .65; cursor: wait; }
+    #status { margin: 18px 0 0; padding: 12px 14px; border-radius: 8px; line-height: 1.5; }
+    #status[hidden] { display: none; }
+    #status[data-kind="success"] { color: #125b35; background: #e7f7ed; }
+    #status[data-kind="error"] { color: #8a2020; background: #fff0f0; }
+    @media (max-width: 480px) { body { padding: 12px; } main { border-radius: 13px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Buat Akun</h1>
+    <p class="intro">Lengkapi data berikut. Nomor WhatsApp digunakan untuk mengirim konfirmasi registrasi.</p>
+    <form id="register-form">
+      <div class="field">
+        <label for="nama">Nama lengkap</label>
+        <input id="nama" name="nama" type="text" maxlength="100" autocomplete="name" required>
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" maxlength="150" autocomplete="email" required>
+      </div>
+      <div class="field">
+        <label for="no_hp">Nomor WhatsApp</label>
+        <input id="no_hp" name="no_hp" type="tel" inputmode="tel" autocomplete="tel" placeholder="081234567890" required>
+      </div>
+      <div class="field">
+        <label for="alamat">Alamat</label>
+        <textarea id="alamat" name="alamat" maxlength="500" autocomplete="street-address" required></textarea>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" minlength="8" maxlength="72" autocomplete="new-password" required>
+      </div>
+      <button id="submit-button" type="submit">Daftar</button>
+    </form>
+    <p id="status" role="status" aria-live="polite" hidden></p>
+  </main>
+  <script>
+    const form = document.querySelector('#register-form');
+    const statusBox = document.querySelector('#status');
+    const submitButton = document.querySelector('#submit-button');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      statusBox.hidden = true;
+      submitButton.disabled = true;
+      submitButton.textContent = 'Memproses...';
+
+      try {
+        const response = await fetch('api/register.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(Object.fromEntries(new FormData(form)))
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          const fieldErrors = Object.values(result.errors || {}).join(' ');
+          throw new Error(fieldErrors || result.message || 'Registrasi gagal.');
+        }
+
+        const waNotice = result.whatsapp?.message || '';
+        statusBox.textContent = `${result.message} ${waNotice}`;
+        statusBox.dataset.kind = 'success';
+        form.reset();
+      } catch (error) {
+        statusBox.textContent = error instanceof Error
+          ? error.message
+          : 'Terjadi kesalahan saat menghubungi server.';
+        statusBox.dataset.kind = 'error';
+      } finally {
+        statusBox.hidden = false;
+        submitButton.disabled = false;
+        submitButton.textContent = 'Daftar';
+      }
+    });
+  </script>
+</body>
+</html>
